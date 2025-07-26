@@ -4,3 +4,4 @@ matplotlib
 plotly
 openpyxl
 xlsxwriter
+matplotlib.pyplot
