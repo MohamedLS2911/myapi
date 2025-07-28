@@ -18,11 +18,13 @@ menu = st.sidebar.selectbox("Choisir une section", [
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data.csv")
-    df.columns = df.columns.str.strip()
-    return df
-
-df = load_data()
+    try:
+        df = pd.read_csv("data.csv")
+        df.columns = df.columns.str.strip()
+        return df
+    except FileNotFoundError:
+        st.error("❌ Le fichier 'data.csv' est introuvable. Vérifie qu'il est bien dans le même dossier que ce script.")
+        return pd.DataFrame()
 
 # Colonnes non analytiques
 meta_cols = ['organisationunitid', 'organisationunitname', 'organisationunitcode', 'organisationunitdescription']
