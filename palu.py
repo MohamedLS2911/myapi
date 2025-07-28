@@ -1,5 +1,3 @@
-# dashboard_app.py
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -32,20 +30,16 @@ value_columns = [col for col in df.columns if col not in meta_cols]
 
 # Extraction des indicateurs
 indicateurs_dict = {}
-annees_disponibles = set()
 
 for col in value_columns:
-    match = re.match(r"(.*?) (Janvier|Février|Mars|Avril|Mai|Juin|Juillet|Août|Septembre|Octobre|Novembre|Décembre) (\d{4}) (.*)", col)
+    match = re.match(r"(.*?) (Janvier|Février|Mars|Avril|Mai|Juin|Juillet|Août|Septembre|Octobre|Novembre|Décembre) (.*)", col)
     if match:
         indicateur = match.group(1).strip()
         mois = match.group(2)
-        annee = match.group(3)
-        structure = match.group(4).strip()
-        cle = f"{mois} {annee}"
-        annees_disponibles.add(annee)
+        structure = match.group(3).strip()
         if indicateur not in indicateurs_dict:
             indicateurs_dict[indicateur] = []
-        indicateurs_dict[indicateur].append((mois, annee, structure, col))
+        indicateurs_dict[indicateur].append((mois, structure, col))
 
 # Page Accueil
 if menu == "Accueil":
@@ -54,7 +48,7 @@ if menu == "Accueil":
     Bienvenue dans le tableau de bord interactif pour l'analyse des données de paludisme.
 
     Ce tableau permet de :
-    - Visualiser les indicateurs clés par mois, année et type de structure
+    - Visualiser les indicateurs clés par mois et type de structure
     - Afficher les cas par arrondissement
     - Exporter les tableaux en Excel
     - Explorer les données sur une carte interactive (si coordonnées disponibles)
@@ -66,22 +60,20 @@ elif menu == "Analyse par indicateur":
 
     if indicateurs_dict:
         indicateur_choisi = st.selectbox("Indicateur", sorted(indicateurs_dict.keys()))
-        annees = sorted(set(annee for _, annee, _, _ in indicateurs_dict[indicateur_choisi]))
-        annee_choisie = st.selectbox("Année", annees)
-        mois_dispos = sorted(set(mois for mois, annee, _, _ in indicateurs_dict[indicateur_choisi] if annee == annee_choisie))
+        mois_dispos = sorted(set(mois for mois, _, _ in indicateurs_dict[indicateur_choisi]))
         mois_choisi = st.selectbox("Mois", mois_dispos)
-        structures = sorted(set(structure for mois, annee, structure, _ in indicateurs_dict[indicateur_choisi] if mois == mois_choisi and annee == annee_choisie))
+        structures = sorted(set(structure for mois, structure, _ in indicateurs_dict[indicateur_choisi] if mois == mois_choisi))
         structure_choisie = st.selectbox("Type de structure", structures)
 
         # Trouver la colonne correspondante
         colonne_finale = None
-        for mois, annee, structure, col in indicateurs_dict[indicateur_choisi]:
-            if mois == mois_choisi and annee == annee_choisie and structure == structure_choisie:
+        for mois, structure, col in indicateurs_dict[indicateur_choisi]:
+            if mois == mois_choisi and structure == structure_choisie:
                 colonne_finale = col
                 break
 
         if colonne_finale:
-            st.subheader(f"{indicateur_choisi} - {mois_choisi} {annee_choisie} ({structure_choisie})")
+            st.subheader(f"{indicateur_choisi} - {mois_choisi} ({structure_choisie})")
             df_viz = df[['organisationunitname', colonne_finale]].dropna()
             df_viz[colonne_finale] = pd.to_numeric(df_viz[colonne_finale], errors='coerce')
             df_viz = df_viz.sort_values(by=colonne_finale, ascending=False)
@@ -95,7 +87,7 @@ elif menu == "Analyse par indicateur":
             st.download_button(
                 label="📥 Télécharger ce tableau (Excel)",
                 data=buffer,
-                file_name=f"{indicateur_choisi}_{mois_choisi}_{annee_choisie}_{structure_choisie}.xlsx",
+                file_name=f"{indicateur_choisi}_{mois_choisi}_{structure_choisie}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
@@ -103,7 +95,7 @@ elif menu == "Analyse par indicateur":
             fig, ax = plt.subplots(figsize=(12, 5))
             ax.bar(df_viz['organisationunitname'], df_viz[colonne_finale], color='darkgreen')
             ax.set_ylabel("Valeur")
-            ax.set_title(f"{indicateur_choisi} - {mois_choisi} {annee_choisie} ({structure_choisie})")
+            ax.set_title(f"{indicateur_choisi} - {mois_choisi} ({structure_choisie})")
             ax.set_xticks(range(len(df_viz)))
             ax.set_xticklabels(df_viz['organisationunitname'], rotation=90)
             st.pyplot(fig)
@@ -129,5 +121,7 @@ elif menu == "Comparaison temporelle":
 # Téléchargements
 elif menu == "Téléchargements":
     st.title("📥 Téléchargement des fichiers")
-    st.download_button("📥 Télécharger le fichier de données brut", data=open("data.csv", "rb"), file_name="data.csv")
+    with open("data.csv", "rb") as f:
+        st.download_button("📥 Télécharger le fichier de données brut", data=f, file_name="data.csv")
+
 
